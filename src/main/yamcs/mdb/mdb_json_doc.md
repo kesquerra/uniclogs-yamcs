@@ -92,7 +92,7 @@ optional fields:
             "name": "C3TxCtrl",
             "code": 0,
             "arguments": [
-                "bool_toggle"
+                "bool_enable_disable"
             ],
             "response": true
         }
@@ -136,7 +136,7 @@ optional fields:
             "name": "C3TxCtrl",
             "code": 0,
             "arguments": [
-                "bool_toggle"
+                "bool_enable_disable"
             ],
             "response": true
         }
