@@ -7,6 +7,7 @@ import java.nio.ByteOrder;
 import org.yamcs.xtce.Argument;
 import org.yamcs.xtce.ArgumentType;
 import org.yamcs.xtce.BooleanArgumentType;
+import org.yamcs.xtce.BooleanDataEncoding;
 import org.yamcs.xtce.BooleanParameterType;
 import org.yamcs.xtce.DataType;
 import org.yamcs.xtce.EnumeratedParameterType;
@@ -16,26 +17,20 @@ import org.yamcs.xtce.IntegerParameterType;
 import org.yamcs.xtce.Parameter;
 import org.yamcs.xtce.ParameterType;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+public class MdbDataType implements Parseable {
+    public String name;
+    public Type type;
+    public Integer sizeInBits;
+    public ByteOrder byteOrder;
+    public Encoding encoding;
 
-public class MdbDataType {
-    String name;
-    Type type;
-    int sizeInBits;
-    ByteOrder byteOrder;
-    Encoding encoding;
-
-    public enum Encoding {
+    private enum Encoding {
         UNSIGNED,
         SIGNED
         //TODO: add more encodings
     }
 
-    public enum Type {
+    private enum Type {
         INTEGER,
         BOOLEAN,
         ENUM,
@@ -70,18 +65,22 @@ public class MdbDataType {
         this.name = name;
     }
 
-    public void setType(String type) throws IOException {
-        Type newType = null;
+    public String getName() {
+        return this.name;
+    }
 
-        switch (type) {
-            case "int":
-                newType = Type.INTEGER;
-                break;
-            default:
-                //TODO: custom error handling
-                throw new IOException();
+    public void setType(String type) {
+        if (type.equals("int")) {
+            this.type = Type.INTEGER;
+        } else if (type.equals("bool")) {
+            this.type = Type.BOOLEAN;
+        } else if (type.equals("enum")) {
+            this.type = Type.ENUM;
+        } else {
+            this.type = Type.FLOAT;
         }
-        this.type = newType;
+
+        //TODO: Error handling for unknown type
     }
 
     public Type getType() {
@@ -90,6 +89,10 @@ public class MdbDataType {
 
     public void setSizeInBits(int sizeInBits) {
         this.sizeInBits = sizeInBits;
+    }
+
+    public void setSizeInBits(String sizeInBits) {
+        this.sizeInBits = Integer.parseInt(sizeInBits);
     }
 
     public void setByteOrder(String byteOrder) {
@@ -110,17 +113,17 @@ public class MdbDataType {
 
     @Override
     public String toString() {
-        return String.format("DataType[%s, %s, %d, %s, %s]", this.name, this.type, this.sizeInBits, this.byteOrder, this.encoding);
+        return String.format("MdbDataType[%s, %s, %d, %s, %s]", this.name, this.type, this.sizeInBits, this.byteOrder, this.encoding);
     }
 
-    public ParameterType createParameterType(String name) {
+    public ParameterType createParameterType() {
         switch (this.type) {
             case INTEGER: {
                 IntegerParameterType.Builder builder = new IntegerParameterType.Builder();
                 builder.setName(name);
                 builder.setSizeInBits(this.sizeInBits);
                 IntegerDataEncoding.Builder eBuilder = new IntegerDataEncoding.Builder();
-                if (this.encoding.equals(Encoding.SIGNED)) {
+                if (this.encoding.equals(Encoding.UNSIGNED)) {
                     eBuilder.setEncoding(IntegerDataEncoding.Encoding.UNSIGNED);
                 } else {
                     eBuilder.setEncoding(IntegerDataEncoding.Encoding.TWOS_COMPLEMENT);
@@ -129,14 +132,23 @@ public class MdbDataType {
                 builder.setEncoding(eBuilder);
                 return builder.build();
             }
+            case BOOLEAN: {
+                BooleanParameterType.Builder builder = new BooleanParameterType.Builder();
+                BooleanDataEncoding.Builder eBuilder = new BooleanDataEncoding.Builder();
+                builder.setName(name);
+                eBuilder.setSizeInBits(this.sizeInBits);
+                builder.setEncoding(eBuilder);
+                return builder.build();
+            }
 
             default: return null;
         }
     }
 
-    public Parameter createParameter(String name) {
-        Parameter param = new Parameter(name);
-        param.setParameterType(this.createParameterType(name));
-        return param;
+
+    public void setField(String name, String value) throws ReflectiveOperationException {
+        String methodName = "set" + name.substring(0,1).toUpperCase() + name.substring(1);
+        System.err.println(methodName + " " + value);
+        this.getClass().getDeclaredMethod(methodName, String.class).invoke(this, value);
     }
 }

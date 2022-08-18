@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.yamcs.ConfigurationException;
 import org.yamcs.YConfiguration;
@@ -37,23 +39,22 @@ public class MdbLoader implements SpaceSystemLoader {
         }
         MdbCommand cmd = new MdbCommand("test", args);
         system.addMetaCommand(cmd.build());**/
-        List<MdbDataType> dTypes = null;
-        try {
-            MdbParser parser = new MdbParser(this.file);
-            dTypes = parser.parse();
-        } catch (IOException e) {
-            throw new ConfigurationException(e);
-        }
+        org.oresat.mdb.Mdb mdb = this.getMdb(this.file);
 
-        for (MdbDataType dType: dTypes) {
-            system.addParameterType(dType.createParameterType(dType.name));
-            system.addParameter(dType.createParameter(dType.name));
-        }
-
-         
+        system = mdb.migrateToSpaceSystem(system);
 
         return system;
     }
+
+    private org.oresat.mdb.Mdb getMdb(String file) throws ConfigurationException {
+        try {
+            MdbParser parser = new MdbParser(file);
+            return parser.parse();
+        } catch (IOException | ReflectiveOperationException e) {
+            throw new ConfigurationException(e);
+        }
+
+    } 
 
     @Override
     public String getConfigName() {
